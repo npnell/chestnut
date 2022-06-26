@@ -4,10 +4,6 @@
 #include <cstdint>
 #include <fstream>
 #include <chrono>
-#include <random>
-
-extern const unsigned int VIDEO_WIDTH;
-extern const unsigned int VIDEO_HEIGHT;
 
 const unsigned int START_ADDRESS = 0x200;
 const unsigned int FONTSET_START_ADDRESS = 0x50;
@@ -35,10 +31,28 @@ uint8_t fontset[FONTSET_SIZE] =
 
 class chip8 {
 public:
-	chip8();
+	chip8(unsigned int, unsigned int);
 
-	void load_rom(const char* filename);
+	void load_rom(const char*);
 	void cycle();
+
+	uint32_t _video[64 * 32]{ 0x000000FF };
+	uint8_t  _keypad[16]{ 0 };
+
+private:
+	uint8_t  _memory[4096];
+	uint8_t  _register[16];
+	uint16_t _stack[16];
+	uint16_t _pc;
+	uint8_t  _sp;
+	uint8_t  _delay_timer;
+	uint8_t  _sound_timer;
+	uint16_t _opcode;
+	uint16_t _index;
+
+	// Video dimensions
+	unsigned int video_width;
+	unsigned int video_height;
 
 	// Instructions
 	void OP_00E0();
@@ -88,33 +102,14 @@ public:
 	Chip8Func table8[0xE + 1]{ &chip8::OP_NULL };
 	Chip8Func tableE[0xE + 1]{ &chip8::OP_NULL };
 	Chip8Func tableF[0x65 + 1]{ &chip8::OP_NULL };
-
-	uint32_t _video[64 * 32];
-	uint8_t  _keypad[16]{ 0 };
-
-private:
-	uint8_t  _memory[4096];
-	uint8_t  _register[16];
-	uint16_t _stack[16];
-	uint16_t _pc;
-	uint8_t  _sp;
-	uint8_t  _delay_timer;
-	uint8_t  _sound_timer;
-	uint16_t _opcode;
-	uint16_t _index;
-
-	std::default_random_engine rand_gen;
-	std::uniform_int_distribution<uint8_t> rand_byte;
 };
 
-chip8::chip8()
-	: _pc(START_ADDRESS), rand_gen(std::chrono::system_clock::now().time_since_epoch().count())
+chip8::chip8(unsigned int video_width, unsigned int video_height)
+	: _pc(START_ADDRESS), video_width(video_width), video_height(video_height)
 {
 	for (size_t i = 0; i < FONTSET_SIZE; ++i) {
 		_memory[FONTSET_START_ADDRESS + i] = fontset[i];
 	}
-
-	rand_byte = std::uniform_int_distribution<uint8_t>(0, 255u);
 
 	// Set up function pointer table
 	table[0x0] = &chip8::Table0;
@@ -193,7 +188,7 @@ void chip8::load_rom(const char* filename)
 		file.read(buffer, size);
 		file.close();
 
-		for (size_t i = 0; i < size; ++i) {
+		for (long i = 0; i < size; ++i) {
 			_memory[START_ADDRESS + i] = buffer[i];
 		}
 		delete[] buffer;
@@ -412,7 +407,7 @@ void chip8::OP_Cxkk()
 	// Set Vx = random byte AND kk.
 	uint8_t Vx = (_opcode & 0x0F00u) >> 8;
 	uint8_t byte = _opcode & 0x00FFu;
-	_register[Vx] = rand_byte(rand_gen) & byte;
+	_register[Vx] = static_cast<uint8_t>(rand()%256) & byte;
 }
 
 void chip8::OP_Dxyn()
@@ -422,8 +417,8 @@ void chip8::OP_Dxyn()
 	uint8_t Vy = (_opcode & 0x00F0u) >> 4;
 	uint8_t height = _opcode & 0x000Fu;
 
-	uint8_t xPos = _register[Vx] % VIDEO_WIDTH;
-	uint8_t yPos = _register[Vy] % VIDEO_HEIGHT;
+	uint8_t xPos = _register[Vx] % video_width;
+	uint8_t yPos = _register[Vy] % video_height;
 
 	_register[0xF] = 0;
 
@@ -432,13 +427,13 @@ void chip8::OP_Dxyn()
 
 		for (size_t col = 0; col < 8; ++col) {
 			uint8_t spritePixel = spriteByte & (0x80u >> col);
-			uint32_t* screenPixel = &_video[(yPos + row) * VIDEO_WIDTH + (xPos + col)];
+			uint32_t* screenPixel = &_video[(yPos + row) * video_width + (xPos + col)];
 
 			if (spritePixel) {
 				if (*screenPixel == 0xFFFFFFFF)
 					_register[0xF] = 1;
 
-				*screenPixel ^= 0xFFFFFFFF;
+				*screenPixel ^= 0xFFFFFF00;
 			}
 		}
 	}

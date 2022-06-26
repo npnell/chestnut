@@ -1,9 +1,11 @@
+#define STB_IMAGE_IMPLEMENTATION
 #include <iostream>
 #include <string>
 
-#include "chip8.h"
-#include "renderer.h"
-#include "shader.h"
+#include <chip8.h>
+#include <renderer.h>
+#include <shader.h>
+#include <stb_image.h>
 
 const unsigned int VIDEO_WIDTH = 64;
 const unsigned int VIDEO_HEIGHT = 32;
@@ -11,7 +13,22 @@ const char *WINDOW_TITLE = "CHIP8 emu";
 
 int main(int argc, char* argv[])
 {
-	Shader shader("vertex_shader.glsl", "fragment_shader.glsl");
+	if (argc != 4) {
+		std::cerr << "Usage: <scale> <delay> <ROM>" << std::endl;
+		std::exit(EXIT_FAILURE);
+	}
+
+	int video_scale = std::stoi(argv[1]);
+	float cycle_delay = std::stof(argv[2]);
+	char const* rom_file_name = argv[3];
+
+	chip8 Chip8(VIDEO_WIDTH, VIDEO_HEIGHT);
+	Chip8.load_rom(rom_file_name);
+
+	context context(VIDEO_WIDTH * video_scale, VIDEO_HEIGHT * video_scale, WINDOW_TITLE);
+	viewport viewport(context, VIDEO_WIDTH * video_scale, VIDEO_HEIGHT * video_scale);
+
+	Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
 
 	float vertices[] = {
 		 1.0f,  1.0f, 0.0f,   1.0f, 1.0f, // top right
@@ -30,10 +47,10 @@ int main(int argc, char* argv[])
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	// texture attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
 	unsigned int texture;
@@ -43,22 +60,15 @@ int main(int argc, char* argv[])
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	if (argc != 4) {
-		std::cerr << "Usage: <path> <scale> <delay> <ROM>" << std::endl;
-		std::exit(EXIT_FAILURE);
-	}
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	int video_scale = std::stoi(argv[1]);
-	int cycle_delay = std::stoi(argv[2]);
-	char const* rom_file_name = argv[3];
-
-	chip8 Chip8;
-	Chip8.load_rom(rom_file_name);
-
-	int video_pitch = sizeof(Chip8._video[0]) * VIDEO_WIDTH;
-
-	context context(VIDEO_WIDTH, VIDEO_HEIGHT, WINDOW_TITLE);
-	viewport viewport(context, VIDEO_WIDTH, VIDEO_HEIGHT);
+	int width, height, nrChannels;
+	unsigned char* data = stbi_load("textures/test.jpg", &width, &height, &nrChannels, 0);
+	if (data)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	else
+		std::cout << "Failed to load texture" << std::endl;
+	stbi_image_free(data);
 
 	bool quit = false;
 	auto last_cycle_time = std::chrono::high_resolution_clock::now();
@@ -67,10 +77,8 @@ int main(int argc, char* argv[])
 		// Render loop
 		process_input(context.window, Chip8._keypad);
 
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-
-		glBindTexture(GL_TEXTURE_2D, texture);
 		
 		auto current_time = std::chrono::high_resolution_clock::now();
 		float dt = std::chrono::duration<float, std::chrono::milliseconds::period>(current_time - last_cycle_time).count();
@@ -78,12 +86,14 @@ int main(int argc, char* argv[])
 		if (dt > cycle_delay) {
 			last_cycle_time = current_time;
 			Chip8.cycle();
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VIDEO_WIDTH * video_scale, VIDEO_HEIGHT * video_scale, 0, GL_RGBA, GL_UNSIGNED_BYTE, Chip8._video);
+
+			// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VIDEO_WIDTH, VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, Chip8._video);
+			glBindTexture(GL_TEXTURE_2D, texture);
 		}
 
 		shader.use();
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		glfwSwapBuffers(context.window);
 		glfwPollEvents();
