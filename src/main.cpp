@@ -19,13 +19,13 @@ int main(int argc, char* argv[])
 	float cycle_delay = std::stof(argv[1]);
 	char const* rom_file_name = argv[2];
 
-	chip8 Chip8;
-	Chip8.load_rom(rom_file_name);
+	chip8 _cpu;
+	_cpu.load_rom(rom_file_name);
 
 	context context(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
 	viewport viewport(context, WINDOW_WIDTH, WINDOW_HEIGHT);
 
-	Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
+	Shader _shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
 
 	float vertices[] = {
 		 1.0f,  1.0f, 0.0f,   1.0f, 1.0f, // top right
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 
 	while (!glfwWindowShouldClose(context.window)) {
 		// Render loop
-		process_input(context.window, Chip8._keypad);
+		process_input(context.window, _cpu._keypad);
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -77,12 +77,11 @@ int main(int argc, char* argv[])
 
 		if (dt > cycle_delay) {
 			last_cycle_time = current_time;
-			Chip8.cycle();
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, Chip8._video);
+			_cpu.cycle();
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, _cpu._video);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
-
-		shader.use();
+		_shader.use();
 		glBindVertexArray(VAO);
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glDrawArrays(GL_TRIANGLES, 0, 6);

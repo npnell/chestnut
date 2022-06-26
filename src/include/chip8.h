@@ -90,7 +90,7 @@ private:
 	void Table8();
 	void TableE();
 	void TableF();
-	void OP_NULL() {}
+	void OP_NULL() { }
 
 	typedef void (chip8::* Chip8Func)();
 	Chip8Func table[0xF + 1]{ &chip8::OP_NULL };
@@ -185,7 +185,7 @@ void chip8::load_rom(const char* filename)
 		file.close();
 
 		for (long i = 0; i < size; ++i) {
-			_memory[START_ADDRESS + i] = buffer[i];
+			_memory[START_ADDRESS + i] = static_cast<uint8_t>(buffer[i]);
 		}
 		delete[] buffer;
 	}
@@ -428,7 +428,7 @@ void chip8::OP_Dxyn()
 			if (spritePixel) {
 				if (*screenPixel == 0xFFFFFFFF)
 					_register[0xF] = 1;
-
+				
 				*screenPixel ^= 0xFFFFFF00;
 			}
 		}
