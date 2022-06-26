@@ -31,7 +31,7 @@ uint8_t fontset[FONTSET_SIZE] =
 
 class chip8 {
 public:
-	chip8(unsigned int, unsigned int);
+	chip8();
 
 	void load_rom(const char*);
 	void cycle();
@@ -49,10 +49,6 @@ private:
 	uint8_t  _sound_timer;
 	uint16_t _opcode;
 	uint16_t _index;
-
-	// Video dimensions
-	unsigned int video_width;
-	unsigned int video_height;
 
 	// Instructions
 	void OP_00E0();
@@ -104,8 +100,8 @@ private:
 	Chip8Func tableF[0x65 + 1]{ &chip8::OP_NULL };
 };
 
-chip8::chip8(unsigned int video_width, unsigned int video_height)
-	: _pc(START_ADDRESS), video_width(video_width), video_height(video_height)
+chip8::chip8()
+	: _pc(START_ADDRESS)
 {
 	for (size_t i = 0; i < FONTSET_SIZE; ++i) {
 		_memory[FONTSET_START_ADDRESS + i] = fontset[i];
@@ -218,7 +214,7 @@ void chip8::cycle()
 void chip8::OP_00E0()
 {
 	// Clear the display.
-	memset(_video, 0, sizeof(_video));
+	memset(_video, 0x000000FF, sizeof(_video));
 }
 
 void chip8::OP_00EE()
@@ -417,8 +413,8 @@ void chip8::OP_Dxyn()
 	uint8_t Vy = (_opcode & 0x00F0u) >> 4;
 	uint8_t height = _opcode & 0x000Fu;
 
-	uint8_t xPos = _register[Vx] % video_width;
-	uint8_t yPos = _register[Vy] % video_height;
+	uint8_t xPos = _register[Vx] % 64;
+	uint8_t yPos = _register[Vy] % 32;
 
 	_register[0xF] = 0;
 
@@ -427,7 +423,7 @@ void chip8::OP_Dxyn()
 
 		for (size_t col = 0; col < 8; ++col) {
 			uint8_t spritePixel = spriteByte & (0x80u >> col);
-			uint32_t* screenPixel = &_video[(yPos + row) * video_width + (xPos + col)];
+			uint32_t* screenPixel = &_video[(31 - (yPos + row)) * 64 + (xPos + col)];
 
 			if (spritePixel) {
 				if (*screenPixel == 0xFFFFFFFF)

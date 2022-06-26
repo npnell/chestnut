@@ -1,32 +1,29 @@
-#define STB_IMAGE_IMPLEMENTATION
 #include <iostream>
 #include <string>
 
 #include <chip8.h>
 #include <renderer.h>
 #include <shader.h>
-#include <stb_image.h>
 
-const unsigned int VIDEO_WIDTH = 64;
-const unsigned int VIDEO_HEIGHT = 32;
+const unsigned int WINDOW_WIDTH = 640;
+const unsigned int WINDOW_HEIGHT = 320;
 const char *WINDOW_TITLE = "CHIP8 emu";
 
 int main(int argc, char* argv[])
 {
-	if (argc != 4) {
-		std::cerr << "Usage: <scale> <delay> <ROM>" << std::endl;
+	if (argc != 3) {
+		std::cerr << "Usage: <delay> <ROM>" << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
 
-	int video_scale = std::stoi(argv[1]);
-	float cycle_delay = std::stof(argv[2]);
-	char const* rom_file_name = argv[3];
+	float cycle_delay = std::stof(argv[1]);
+	char const* rom_file_name = argv[2];
 
-	chip8 Chip8(VIDEO_WIDTH, VIDEO_HEIGHT);
+	chip8 Chip8;
 	Chip8.load_rom(rom_file_name);
 
-	context context(VIDEO_WIDTH * video_scale, VIDEO_HEIGHT * video_scale, WINDOW_TITLE);
-	viewport viewport(context, VIDEO_WIDTH * video_scale, VIDEO_HEIGHT * video_scale);
+	context context(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
+	viewport viewport(context, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
 
@@ -34,7 +31,10 @@ int main(int argc, char* argv[])
 		 1.0f,  1.0f, 0.0f,   1.0f, 1.0f, // top right
 		 1.0f, -1.0f, 0.0f,   1.0f, 0.0f, // bottom right
 		-1.0f, -1.0f, 0.0f,   0.0f, 0.0f, // bottom left
-		-1.0f,  1.0f, 0.0f,   0.0f, 1.0f  // top left 
+
+		-1.0f, -1.0f, 0.0f,   0.0f, 0.0f, // bottom left
+		-1.0f,  1.0f, 0.0f,   0.0f, 1.0f,  // top left
+		 1.0f,  1.0f, 0.0f,   1.0f, 1.0f, // top right
 	};
 
 	unsigned int VAO, VBO;
@@ -47,10 +47,10 @@ int main(int argc, char* argv[])
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	// texture attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
 	unsigned int texture;
@@ -61,14 +61,6 @@ int main(int argc, char* argv[])
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	int width, height, nrChannels;
-	unsigned char* data = stbi_load("textures/test.jpg", &width, &height, &nrChannels, 0);
-	if (data)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	else
-		std::cout << "Failed to load texture" << std::endl;
-	stbi_image_free(data);
 
 	bool quit = false;
 	auto last_cycle_time = std::chrono::high_resolution_clock::now();
@@ -86,17 +78,20 @@ int main(int argc, char* argv[])
 		if (dt > cycle_delay) {
 			last_cycle_time = current_time;
 			Chip8.cycle();
-
-			// glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, VIDEO_WIDTH, VIDEO_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, Chip8._video);
-			glBindTexture(GL_TEXTURE_2D, texture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, Chip8._video);
+			glGenerateMipmap(GL_TEXTURE_2D);
 		}
 
 		shader.use();
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		glfwSwapBuffers(context.window);
 		glfwPollEvents();
 	}
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
+
 	glfwTerminate();
 }
