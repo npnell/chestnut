@@ -159,7 +159,8 @@ void chip8::Table0()
 
 void chip8::Table8()
 {
-	((*this).*(table8[_opcode & 0x000Fu]))();
+	if((_opcode & 0x000F) != 0xE)
+		((*this).*(table8[_opcode & 0x000Fu]))();
 }
 
 void chip8::TableE()

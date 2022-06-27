@@ -91,6 +91,7 @@ int main(int argc, char* argv[])
 	}
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
+	glDeleteTextures(1, &texture);
 
 	glfwTerminate();
 }
