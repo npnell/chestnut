@@ -5,8 +5,12 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
+#include <chip8.h>
+
+extern chip8 _cpu;
+
 void framebuffer_size_callback(GLFWwindow*, int, int);
-void process_input(GLFWwindow*, uint8_t*);
+void key_callback(GLFWwindow*, int, int, int, int);
 
 class context {
 private:
@@ -42,6 +46,7 @@ GLFWwindow* context::glfw_init(int window_width, int window_height, const char* 
 		return NULL;
 	}
 	glfwMakeContextCurrent(window);
+	glfwSetKeyCallback(window, key_callback);
 	return window;
 }
 
@@ -66,74 +71,33 @@ void framebuffer_size_callback(GLFWwindow* window, int window_width, int window_
 	glViewport(0, 0, window_width, window_height);
 }
 
-void process_input(GLFWwindow* window, uint8_t* key)
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-
-	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
-		key[0] = 1;
-	else key[0] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-		key[1] = 1;
-	else key[1] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-		key[2] = 1;
-	else key[2] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
-		key[3] = 1;
-	else key[3] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-		key[4] = 1;
-	else key[4] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		key[5] = 1;
-	else key[5] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-		key[6] = 1;
-	else key[6] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		key[7] = 1;
-	else key[7] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		key[8] = 1;
-	else key[8] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		key[9] = 1;
-	else key[9] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
-		key[0xA] = 1;
-	else key[0xA] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
-		key[0xB] = 1;
-	else key[0xB] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
-		key[0xC] = 1;
-	else key[0xC] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
-		key[0xD] = 1;
-	else key[0xD] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
-		key[0xE] = 1;
-	else key[0xE] = 0;
-
-	if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS)
-		key[0xF] = 1;
-	else key[0xF] = 0;
+	switch (action) {
+	case GLFW_PRESS:
+		switch (key) {
+		case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, true);	  break;
+		case GLFW_KEY_X: _cpu._keypad[0] = 1;							  break;
+		case GLFW_KEY_1: _cpu._keypad[1] = 1;							  break;
+		case GLFW_KEY_2: _cpu._keypad[2] = 1;							  break;
+		case GLFW_KEY_3: _cpu._keypad[3] = 1;							  break;
+		case GLFW_KEY_Q: _cpu._keypad[4] = 1;							  break;
+		case GLFW_KEY_W: _cpu._keypad[5] = 1;							  break;
+		case GLFW_KEY_E: _cpu._keypad[6] = 1;							  break;
+		case GLFW_KEY_A: _cpu._keypad[7] = 1;							  break;
+		case GLFW_KEY_S: _cpu._keypad[8] = 1;							  break;
+		case GLFW_KEY_D: _cpu._keypad[9] = 1;							  break;
+		case GLFW_KEY_Z: _cpu._keypad[0xA] = 1;							  break;
+		case GLFW_KEY_C: _cpu._keypad[0xB] = 1;							  break;
+		case GLFW_KEY_4: _cpu._keypad[0xC] = 1;							  break;
+		case GLFW_KEY_R: _cpu._keypad[0xD] = 1;							  break;
+		case GLFW_KEY_F: _cpu._keypad[0xE] = 1;							  break;
+		case GLFW_KEY_V: _cpu._keypad[0xF] = 1;							  break;
+		}
+		break;
+	case GLFW_RELEASE: memset(_cpu._keypad, 0, sizeof(_cpu._keypad));
+		break;
+	}
 }
 
 #endif // !RENDERER_H

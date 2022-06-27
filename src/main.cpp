@@ -5,6 +5,8 @@
 #include <renderer.h>
 #include <shader.h>
 
+chip8 _cpu;
+
 const unsigned int WINDOW_WIDTH = 640;
 const unsigned int WINDOW_HEIGHT = 320;
 const char *WINDOW_TITLE = "CHIP8 emu";
@@ -19,7 +21,6 @@ int main(int argc, char* argv[])
 	char const* rom_file_name = argv[1];
 	float cycle_delay = std::stof(argv[2]);
 
-	chip8 _cpu;
 	_cpu.load_rom(rom_file_name);
 
 	context context(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
@@ -67,8 +68,6 @@ int main(int argc, char* argv[])
 
 	while (!glfwWindowShouldClose(context.window)) {
 		// Render loop
-		process_input(context.window, _cpu._keypad);
-
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		
