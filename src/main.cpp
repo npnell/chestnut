@@ -12,12 +12,12 @@ const char *WINDOW_TITLE = "CHIP8 emu";
 int main(int argc, char* argv[])
 {
 	if (argc != 3) {
-		std::cerr << "Usage: <delay> <ROM>" << std::endl;
+		std::cerr << "Usage: <ROM> <delay>" << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
 
-	float cycle_delay = std::stof(argv[1]);
-	char const* rom_file_name = argv[2];
+	char const* rom_file_name = argv[1];
+	float cycle_delay = std::stof(argv[2]);
 
 	chip8 _cpu;
 	_cpu.load_rom(rom_file_name);
