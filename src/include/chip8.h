@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <fstream>
-#include <chrono>
 
 const unsigned int START_ADDRESS = 0x200;
 const unsigned int FONTSET_START_ADDRESS = 0x50;

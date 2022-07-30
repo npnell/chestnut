@@ -1,9 +1,12 @@
 #include <iostream>
-#include <string>
+#include <thread>
 
 #include <chip8.h>
-#include <renderer.h>
+#include <window.h>
 #include <shader.h>
+
+#define FRAME_INTERVAL 1.0f / 60
+#define MULTIPLIER 4
 
 chip8 _cpu;
 
@@ -13,20 +16,18 @@ const char *WINDOW_TITLE = "CHIP8 emu";
 
 int main(int argc, char* argv[])
 {
-	if (argc != 3) {
-		std::cerr << "Usage: <ROM> <delay>" << std::endl;
+	if (argc != 2) {
+		std::cerr << "Usage: <ROM>" << std::endl;
 		std::exit(EXIT_FAILURE);
 	}
 
 	char const* rom_file_name = argv[1];
-	float cycle_delay = std::stof(argv[2]);
 
 	_cpu.load_rom(rom_file_name);
 
-	context context(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
-	viewport viewport(context, WINDOW_WIDTH, WINDOW_HEIGHT);
+	WindowClass window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
 
-	Shader _shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
+	Shader shader("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
 
 	float vertices[] = {
 		 1.0f,  1.0f, 0.0f,   1.0f, 1.0f, // top right
@@ -63,30 +64,29 @@ int main(int argc, char* argv[])
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	bool quit = false;
-	auto last_cycle_time = std::chrono::high_resolution_clock::now();
+	double current_time, last_time = glfwGetTime();
 
-	while (!glfwWindowShouldClose(context.window)) {
+	while (!glfwWindowShouldClose(window.window)) {
 		// Render loop
+		current_time = glfwGetTime();
+		
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-		
-		auto current_time = std::chrono::high_resolution_clock::now();
-		float dt = std::chrono::duration<float, std::chrono::milliseconds::period>(current_time - last_cycle_time).count();
 
-		if (dt > cycle_delay) {
-			last_cycle_time = current_time;
+		if (current_time * MULTIPLIER - last_time >= FRAME_INTERVAL) {
+			last_time = current_time;
 			_cpu.cycle();
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 64, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, _cpu._video);
 			glGenerateMipmap(GL_TEXTURE_2D);
 		}
-		_shader.use();
+		shader.use();
 		glBindVertexArray(VAO);
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
-		glfwSwapBuffers(context.window);
+		glfwSwapBuffers(window.window);
 		glfwPollEvents();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
